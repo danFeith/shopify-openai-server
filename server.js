@@ -10,7 +10,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// In-memory session storage (you can replace this with a more permanent solution later)
+// In-memory session storage
 app.use(session({
   secret: 'your-session-secret', // Change this to a strong secret
   resave: false,
@@ -18,11 +18,11 @@ app.use(session({
   cookie: { secure: false } // Set secure to true for HTTPS (production)
 }));
 
-// Load CSV data
-function loadCSV() {
+// Load product data CSV
+function loadCSVProduct() {
   return new Promise((resolve, reject) => {
     const data = [];
-    fs.createReadStream('shopify_data.csv') // Ensure CSV is in the same folder
+    fs.createReadStream('shopify_store_data.csv') // Ensure CSV is in the same folder
       .pipe(csv())
       .on('data', (row) => data.push(row))
       .on('end', () => resolve(data))
@@ -30,22 +30,35 @@ function loadCSV() {
   });
 }
 
-// Function to get a response from OpenAI based on the store's data and memory
-async function getAnswer(query, data, sessionHistory) {
+// Load general store info CSV
+function loadCSVGeneral() {
+  return new Promise((resolve, reject) => {
+    const data = [];
+    fs.createReadStream('shopify_store_general_info.csv') // Ensure CSV is in the same folder
+      .pipe(csv())
+      .on('data', (row) => data.push(row))
+      .on('end', () => resolve(data))
+      .on('error', (err) => reject(err));
+  });
+}
+
+// Function to get a response from OpenAI based on store's data and memory
+async function getAnswer(query, productData, generalData, sessionHistory) {
   const prompt = `
   You are a helpful assistant answering questions about a Shopify store. Below is the store data and the context of previous conversations:
 
   Previous interactions:
   ${sessionHistory}
 
-  Current data: ${JSON.stringify(data)}
+  Product data: ${JSON.stringify(productData)}
+  General store info: ${JSON.stringify(generalData)}
 
   Question: ${query}
 
-  Notes for answers: 
-    1. if you can, keep the answers short.
+    Notes for answers: 
+        1. You are a chatbot ai assistant, your name is SaleMate, and you want to help with every thing related to Customer service for the store.
+        1. if you can, keep the answers short.
   `;
-
 
   try {
     const response = await openai.chat.completions.create({
@@ -78,8 +91,9 @@ app.get('/ask', async (req, res) => {
   const sessionHistory = req.session.chatHistory.join("\n");
 
   try {
-    const data = await loadCSV();
-    const answer = await getAnswer(query, data, sessionHistory);
+    const productData = await loadCSVProduct();
+    const generalData = await loadCSVGeneral();
+    const answer = await getAnswer(query, productData, generalData, sessionHistory);
 
     // Store the question and answer in the session history for future context
     req.session.chatHistory.push(`Q: ${query}\nA: ${answer}`);
