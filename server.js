@@ -5,6 +5,8 @@ const { OpenAI } = require('openai');
 require('dotenv').config();
 const session = require('express-session');
 const cors = require('cors'); // Import the cors package
+const path = require('path'); // For resolving file paths
+
 
 
 const app = express();
@@ -109,6 +111,14 @@ app.get('/ask', async (req, res) => {
   } catch (error) {
     res.status(500).send('Error processing the request.');
   }
+});
+
+// Serve static files from the React app
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Any route that doesn't match the API should serve the React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Start the server
