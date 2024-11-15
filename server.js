@@ -4,11 +4,16 @@ const csv = require('csv-parser');
 const { OpenAI } = require('openai');
 require('dotenv').config();
 const session = require('express-session');
+const cors = require('cors'); // Import the cors package
+
 
 const app = express();
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Enable CORS for all routes and all origins
+app.use(cors()); // This will allow CORS for all origins by default
 
 // In-memory session storage
 app.use(session({
